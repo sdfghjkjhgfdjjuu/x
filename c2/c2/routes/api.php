@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\C2Controller;
 |--------------------------------------------------------------------------
 */
 
+Log::info("[DEBUG] API Route file loaded. Method: " . request()->method() . " URL: " . request()->fullUrl());
+
 Route::post('/status', [C2Controller::class, 'statusUpdate']);
 Route::post('/upload', [C2Controller::class, 'upload']);
 Route::post('/systeminfo', [C2Controller::class, 'systemInfo']);

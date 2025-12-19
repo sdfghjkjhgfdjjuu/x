@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("Advanced Malware")]
+[assembly: AssemblyTitle("WindowsService.exe")]
 [assembly: AssemblyDescription("System maintenance and monitoring service")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft Corporation")]
